@@ -9,23 +9,26 @@ TOKEN = os.getenv("BOT_TOKEN")
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-def parse_wildberries(query):
-    url = f"https://www.wildberries.ru/catalog/0/search.aspx?search={query}"
-    headers = {"User-Agent": "Mozilla/5.0"}
+def search_yandex_market(query):
+    url = f"https://market.yandex.ru/search?text={query}"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "ru-RU,ru;q=0.9"
+    }
     try:
-        r = requests.get(url, headers=headers, timeout=10)
+        r = requests.get(url, headers=headers, timeout=15)
         soup = BeautifulSoup(r.text, "html.parser")
-        items = soup.find_all("div", class_="product-card", limit=3)
+        items = soup.find_all("div", class_="_1s4H_", limit=3)
         results = []
         for item in items:
-            name = item.find("span", class_="product-name")
-            price = item.find("span", class_="price-currency")
-            link = item.find("a", class_="product-card__link")
-            if name and price and link:
+            title = item.find("h3", class_="_1k1Lr")
+            price = item.find("span", class_="_1mMkP")
+            link = item.find("a", class_="_1wL6d")
+            if title and price and link:
                 results.append({
-                    "name": name.text.strip(),
-                    "price": price.text.strip() + " ₽",
-                    "url": "https://www.wildberries.ru" + link.get("href"),
+                    "name": title.text.strip(),
+                    "price": price.text.strip(),
+                    "url": "https://market.yandex.ru" + link.get("href"),
                     "color": "🟢"
                 })
         return results
@@ -39,8 +42,8 @@ async def start(msg: types.Message):
 @dp.message()
 async def search(msg: types.Message):
     query = msg.text
-    await msg.answer("🔍 Ищу на Wildberries...")
-    items = parse_wildberries(query)
+    await msg.answer("🔍 Ищу на Яндекс.Маркет...")
+    items = search_yandex_market(query)
     if not items:
         await msg.answer("😕 Ничего не нашёл. Попробуй другое.")
         return
