@@ -6,39 +6,34 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 
 TOKEN = os.getenv("BOT_TOKEN")
-SCRAPINGBEE_KEY = "R2FMHBX7NRGR3TONYJIDQRVDP91CWRAKKDIHU29JETDH808SIVYZWY6ERXNLZ5IRFUF879HLV4XAMUNB"
-
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-def search_avito(query):
-    """Парсинг Avito через ScrapingBee"""
-    url = f"https://www.avito.ru/rossiya?q={query}"
-    params = {
-        "api_key": SCRAPINGBEE_KEY,
-        "url": url,
-        "render_js": "false",
-        "wait": "2000"
+def search_avito_mobile(query):
+    """Парсинг мобильной версии Avito (не блокируется)"""
+    url = f"https://m.avito.ru/rossiya?q={query}"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1"
     }
     try:
-        r = requests.get("https://app.scrapingbee.com/api/v1/", params=params, timeout=30)
+        r = requests.get(url, headers=headers, timeout=15)
         soup = BeautifulSoup(r.text, "html.parser")
-        items = soup.find_all("div", class_="iva-item-body", limit=3)
+        items = soup.find_all("div", class_="item", limit=5)
         results = []
         for item in items:
-            title = item.find("h3", class_="title-root")
-            price = item.find("span", class_="price-text")
-            link = item.find("a", class_="link-link")
+            title = item.find("div", class_="title")
+            price = item.find("div", class_="price")
+            link = item.find("a", class_="link")
             if title and price and link:
                 results.append({
                     "name": title.text.strip(),
                     "price": price.text.strip(),
-                    "url": "https://www.avito.ru" + link.get("href"),
+                    "url": "https://m.avito.ru" + link.get("href"),
                     "color": "🟢"
                 })
-        return results
+        return results[:3]
     except Exception as e:
-        print("Ошибка ScrapingBee:", e)
+        print("Ошибка мобильного Avito:", e)
         return []
 
 @dp.message(Command("start"))
@@ -55,7 +50,7 @@ async def start(msg: types.Message):
 async def search(msg: types.Message):
     query = msg.text
     await msg.answer("🔍 Ищу дешёвые варианты...")
-    items = search_avito(query)
+    items = search_avito_mobile(query)
     if not items:
         await msg.answer("😕 Ничего не нашёл. Попробуй другое название.")
         return
