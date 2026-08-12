@@ -3,13 +3,11 @@ import os
 import requests
 from bs4 import BeautifulSoup
 from aiogram import Bot, Dispatcher, types
-from aiogram.contrib.middlewares.logging import LoggingMiddleware
-from aiogram.types import ParseMode
+from aiogram.filters import Command
 
 TOKEN = os.getenv("BOT_TOKEN")
 bot = Bot(token=TOKEN)
-dp = Dispatcher(bot)
-dp.middleware.setup(LoggingMiddleware())
+dp = Dispatcher()
 
 def parse_avito(query):
     url = f"https://www.avito.ru/rossiya?q={query}"
@@ -36,11 +34,11 @@ def parse_avito(query):
     except:
         return []
 
-@dp.message_handler(commands=["start"])
+@dp.message(Command("start"))
 async def start(msg: types.Message):
     await msg.answer("👟 GreenTag — ищу дешёвые аналоги!\nНапиши что ищешь, например: кроссовки Nike")
 
-@dp.message_handler()
+@dp.message()
 async def search(msg: types.Message):
     query = msg.text
     await msg.answer("🔍 Ищу...")
@@ -50,8 +48,14 @@ async def search(msg: types.Message):
         return
     for item in items:
         text = f"{item['color']} *{item['name']}*\n💰 {item['price']}\n🔗 [Ссылка]({item['url']})"
-        await msg.answer(text, parse_mode=ParseMode.MARKDOWN)
+        await msg.answer(text, parse_mode="Markdown")
+
+async def main():
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    from aiogram import executor
-    executor.start_polling(dp, skip_updates=True)
+    asyncio.run(main())
+
+
+
+
