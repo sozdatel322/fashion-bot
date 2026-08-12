@@ -6,34 +6,39 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 
 TOKEN = os.getenv("BOT_TOKEN")
+SCRAPINGBEE_KEY = "R2FMHBX7NRGR3TONYJIDQRVDP91CWRAKKDIHU29JETDH808SIVYZWY6ERXNLZ5IRFUF879HLV4XAMUNB"
+
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-def search_google_shopping(query):
-    """Поиск товаров через Google Shopping (не блокируется)"""
-    url = f"https://www.google.com/search?q={query}&tbm=shop"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+def search_avito(query):
+    """Парсинг Avito через ScrapingBee"""
+    url = f"https://www.avito.ru/rossiya?q={query}"
+    params = {
+        "api_key": SCRAPINGBEE_KEY,
+        "url": url,
+        "render_js": "false",
+        "wait": "2000"
     }
     try:
-        r = requests.get(url, headers=headers, timeout=15)
+        r = requests.get("https://app.scrapingbee.com/api/v1/", params=params, timeout=30)
         soup = BeautifulSoup(r.text, "html.parser")
-        items = soup.find_all("div", class_="sh-dgr__grid-result", limit=5)
+        items = soup.find_all("div", class_="iva-item-body", limit=3)
         results = []
         for item in items:
-            title = item.find("h3", class_="tAxDx")
-            price = item.find("span", class_="a8Pemb")
-            link = item.find("a", class_="Lq5OHe")
+            title = item.find("h3", class_="title-root")
+            price = item.find("span", class_="price-text")
+            link = item.find("a", class_="link-link")
             if title and price and link:
                 results.append({
                     "name": title.text.strip(),
                     "price": price.text.strip(),
-                    "url": link.get("href"),
+                    "url": "https://www.avito.ru" + link.get("href"),
                     "color": "🟢"
                 })
-        return results[:3]
+        return results
     except Exception as e:
-        print("Ошибка Google:", e)
+        print("Ошибка ScrapingBee:", e)
         return []
 
 @dp.message(Command("start"))
@@ -42,8 +47,7 @@ async def start(msg: types.Message):
         "👟 *GreenTag — дешёвые аналоги*\n\n"
         "Напиши что ищешь, например:\n"
         "`кроссовки Nike`\n"
-        "`iPhone 15`\n"
-        "`пальто зимнее`",
+        "`iPhone 15`",
         parse_mode="Markdown"
     )
 
@@ -51,7 +55,7 @@ async def start(msg: types.Message):
 async def search(msg: types.Message):
     query = msg.text
     await msg.answer("🔍 Ищу дешёвые варианты...")
-    items = search_google_shopping(query)
+    items = search_avito(query)
     if not items:
         await msg.answer("😕 Ничего не нашёл. Попробуй другое название.")
         return
