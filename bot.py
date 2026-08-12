@@ -1,20 +1,24 @@
-from aiogram import Bot, Dispatcher, types
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+import asyncio
+import os
 import requests
 from bs4 import BeautifulSoup
-import re
-import os
+from aiogram import Bot, Dispatcher, types
+from aiogram.contrib.middlewares.logging import LoggingMiddleware
+from aiogram.types import ParseMode
 
 TOKEN = os.getenv("BOT_TOKEN")
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
+dp.middleware.setup(LoggingMiddleware())
 
 def parse_avito(query):
     url = f"https://www.avito.ru/rossiya?q={query}"
-    headers = {"User-Agent": "Mozilla/5.0"}
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
     try:
-        response = requests.get(url, headers=headers, timeout=10)
-        soup = BeautifulSoup(response.text, "html.parser")
+        r = requests.get(url, headers=headers, timeout=15)
+        soup = BeautifulSoup(r.text, "html.parser")
         items = soup.find_all("div", class_="iva-item-body", limit=3)
         results = []
         for item in items:
@@ -33,20 +37,20 @@ def parse_avito(query):
         return []
 
 @dp.message_handler(commands=["start"])
-async def start(message: types.Message):
-    await message.answer("👟 GreenTag — модный сканер цен!\n\nНапиши название вещи (например, 'кроссовки Nike') и я найду дешёвые варианты с рейтингом продавца.\n\nЗелёный 🟢 — можно доверять")
+async def start(msg: types.Message):
+    await msg.answer("👟 GreenTag — ищу дешёвые аналоги!\nНапиши что ищешь, например: кроссовки Nike")
 
 @dp.message_handler()
-async def search(message: types.Message):
-    query = message.text
-    await message.answer("🔍 Ищу лучшие цены...")
-    results = parse_avito(query)
-    if not results:
-        await message.answer("😕 Ничего не нашёл. Попробуй другое название.")
+async def search(msg: types.Message):
+    query = msg.text
+    await msg.answer("🔍 Ищу...")
+    items = parse_avito(query)
+    if not items:
+        await msg.answer("😕 Ничего не нашёл. Попробуй другое.")
         return
-    for item in results:
-        text = f"{item['color']} *{item['name']}*\n💰 {item['price']}\n🔗 [Перейти к объявлению]({item['url']})"
-        await message.answer(text, parse_mode="Markdown")
+    for item in items:
+        text = f"{item['color']} *{item['name']}*\n💰 {item['price']}\n🔗 [Ссылка]({item['url']})"
+        await msg.answer(text, parse_mode=ParseMode.MARKDOWN)
 
 if __name__ == "__main__":
     from aiogram import executor
