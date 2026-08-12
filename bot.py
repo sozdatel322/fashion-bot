@@ -99,15 +99,15 @@ async def search(msg: types.Message):
     query = msg.text
     await msg.answer("🔍 Ищу на Ozon...")
     items = search_ozon(query)
-    
+
     if not items:
         await msg.answer("🔍 Ищу на Яндекс.Маркет...")
         items = search_yandex(query)
-    
+
     if not items:
         await msg.answer("🔍 Ищу на Avito...")
         items = search_avito_rss(query)
-    
+
     if not items:
         await msg.answer(
             "😕 Ничего не нашёл. Попробуй другое название.\n"
@@ -115,12 +115,12 @@ async def search(msg: types.Message):
             parse_mode="Markdown"
         )
         return
-    
+
     for item in items:
+        text = (
 
 
-text = (
-            f"{item['color']} *{item['name']}*\n"
+f"{item['color']} *{item['name']}*\n"
             f"💰 {item['price']}\n"
             f"🔗 [Перейти к товару]({item['url']})"
         )
@@ -131,3 +131,7 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
+
+
